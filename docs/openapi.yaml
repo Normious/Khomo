@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Khomo — Mini API Gateway
+  version: 1.0.0
+  description: >
+    Fixed surface (health, admin, stats). Proxied gateway paths are dynamic —
+    registered at runtime via the admin API — so they are not listed here.
+    Every proxied response carries X-Request-ID, X-Gateway and X-Backend.
+servers:
+  - url: http://localhost:4019
+paths:
+  /health:
+    get:
+      summary: Gateway status
+      responses:
+        '200':
+          description: ok
+  /gateway/admin/routes:
+    get:
+      summary: List routes with backends
+      responses:
+        '200':
+          description: route list
+    post:
+      summary: Create route (auto-reloads)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path_prefix, service_name]
+              properties:
+                path_prefix: { type: string, example: /api/pay }
+                service_name: { type: string, example: Dobadoba }
+                strip_prefix: { type: boolean, default: true }
+                require_auth: { type: boolean, default: true }
+                timeout_ms: { type: integer, default: 30000 }
+                max_retries: { type: integer, default: 0 }
+                add_headers: { type: object, additionalProperties: { type: string } }
+                strip_headers: { type: array, items: { type: string } }
+                websocket: { type: boolean, default: false }
+      responses:
+        '200': { description: reloaded }
+        '400': { description: bad body }
+        '409': { description: prefix exists }
+  /gateway/admin/routes/{id}:
+    delete:
+      summary: Delete route (cascades to backends, auto-reloads)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: reloaded }
+        '400': { description: bad id }
+  /gateway/admin/backends:
+    post:
+      summary: Attach backend (auto-reloads)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [route_id, base_url]
+              properties:
+                route_id: { type: integer }
+                base_url: { type: string, format: uri }
+                weight: { type: integer, default: 1 }
+      responses:
+        '200': { description: reloaded }
+        '400': { description: bad body }
+  /gateway/admin/backends/{id}:
+    delete:
+      summary: Remove backend (auto-reloads)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: reloaded }
+        '400': { description: bad id }
+  /gateway/admin/projects:
+    get:
+      summary: List projects (keys never listed)
+      responses:
+        '200': { description: project list }
+    post:
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, api_key]
+              properties:
+                name: { type: string }
+                api_key: { type: string }
+                rate_limit_per_minute: { type: integer, default: 600 }
+      responses:
+        '201': { description: created }
+        '400': { description: bad body }
+        '409': { description: key exists }
+  /gateway/admin/reload:
+    post:
+      summary: Reload routes from DB, re-sync proxy pools
+      responses:
+        '200': { description: reloaded }
+  /gateway/stats:
+    get:
+      summary: Per-project totals + top routes (needs X-API-Key)
+      parameters:
+        - { name: X-API-Key, in: header, required: true, schema: { type: string } }
+        - { name: days, in: query, schema: { type: integer, default: 30, maximum: 365 } }
+      responses:
+        '200': { description: stats }
+        '401': { description: bad key }

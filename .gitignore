@@ -1,0 +1,15 @@
+# Binaries
+/khomo
+khomo.exe
+
+# SQLite data (local only — recreated from seed script)
+/data/
+
+# Env with secrets
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

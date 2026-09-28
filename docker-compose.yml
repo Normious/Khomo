@@ -1,0 +1,24 @@
+services:
+  khomo:
+    build: .
+    container_name: khomo
+    restart: unless-stopped
+    ports:
+      - "4019:4019"
+    environment:
+      - ENV=production
+      - PORT=4019
+      - DATABASE_PATH=/data/khomo.db
+      - LOG_LEVEL=info
+      - DEFAULT_TIMEOUT_MS=30000
+      - CB_FAILURE_THRESHOLD=5
+      - HEALTH_CHECK_ENABLED=true
+    volumes:
+      - khomo_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  khomo_data:
